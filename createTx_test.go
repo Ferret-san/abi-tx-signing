@@ -17,7 +17,7 @@ import (
 func TestCreateTx(t *testing.T) {
 	//qtumsuite should be able to use precise decimals instead of int64
 	//Params are (PrivKey, ToAddress, Amount)
-	rawTx, err := Tx("cMbgxCJrTYUqgcmiC1berh5DFrtY1KeU4PXZ6NZxgenniF1mXCRk", "qLn9vqbr2Gx3TsVR9QyTVB5mrMoh4x43Uf", 200000000)
+	rawTx, err := P2khTx("cMbgxCJrTYUqgcmiC1berh5DFrtY1KeU4PXZ6NZxgenniF1mXCRk", "qLn9vqbr2Gx3TsVR9QyTVB5mrMoh4x43Uf", 200000000)
 	if err != nil {
 		fmt.Println("Err coming from CreateTx")
 		fmt.Println(err)

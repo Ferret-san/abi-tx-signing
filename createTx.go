@@ -89,21 +89,6 @@ func CallContractData(reader io.Reader, arguments map[string][]interface{}) ([]b
 	return bytecode, nil
 }
 
-//Take in an ABI in JSON format and return a the corresponding hex_string
-func DecodeTx(data []byte) (*abi.ABI, error) {
-	//Load ABI
-	var abi *abi.ABI
-	err := abi.UnmarshalJSON(data)
-	if err != nil {
-		fmt.Println("Error occured unmarshaling: ", err)
-		return nil, err
-	}
-
-	return abi, nil
-	//extract methods from the ABI
-
-}
-
 func GatherUTXOs(serilizedPubKey []byte, sourceTx *wire.MsgTx) (*ListUnspentResponse, int64, error) {
 
 	//Get UTXOs from network
@@ -163,7 +148,7 @@ func GatherUTXOs(serilizedPubKey []byte, sourceTx *wire.MsgTx) (*ListUnspentResp
 	return listUnspentResp, int64(floatBalance), nil
 }
 
-func Tx(privKey string, destination string, amount int64) (string, error) {
+func P2khTx(privKey string, destination string, amount int64) (string, error) {
 
 	redeemTx := wire.NewMsgTx(wire.TxVersion)
 
