@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"strings"
 	"testing"
@@ -29,11 +30,14 @@ func TestCreateTx(t *testing.T) {
 	fmt.Println("raw signed transaction is: ", rawTx)
 }
 
-func TestCreateContractTx(t *testing.T) {
-	//qtumsuite should be able to use precise decimals instead of int64
-	//Params are (PrivKey, ToAddress, Amount, Data)
-	//Data is 608060405234801561001057600080fd5b5060c78061001f6000396000f3fe6080604052348015600f57600080fd5b506004361060325760003560e01c806360fe47b11460375780636d4ce63c146062575b600080fd5b606060048036036020811015604b57600080fd5b8101908080359060200190929190505050607e565b005b60686088565b6040518082815260200191505060405180910390f35b8060008190555050565b6000805490509056fea264697066735822122083c1f201c2ec2cd8a9fa8c8e2ec8d37fd84917c7fcb9fb4ddf93cf2e55ac297064736f6c63430007040033
-	rawTx, err := CreateTx("cMbgxCJrTYUqgcmiC1berh5DFrtY1KeU4PXZ6NZxgenniF1mXCRk", "qUbxboqjBRp96j3La8D1RYkyqx5uQbJPoW", 2000000000, "608060405234801561001057600080fd5b5060c78061001f6000396000f3fe6080604052348015600f57600080fd5b506004361060325760003560e01c806360fe47b11460375780636d4ce63c146062575b600080fd5b606060048036036020811015604b57600080fd5b8101908080359060200190929190505050607e565b005b60686088565b6040518082815260200191505060405180910390f35b8060008190555050565b6000805490509056fea264697066735822122083c1f201c2ec2cd8a9fa8c8e2ec8d37fd84917c7fcb9fb4ddf93cf2e55ac297064736f6c63430007040033")
+func TestCallContractTx(t *testing.T) {
+
+	var abiJson = `[{"inputs":[],"name":"get","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"x","type":"uint256"}],"name":"set","outputs":[],"stateMutability":"nonpayable","type":"function"}]`
+	arguments := map[string][]interface{}{
+		"get": {},
+	}
+	callData, err := CallContractData(strings.NewReader(abiJson), arguments)
+	rawTx, err := CallTx("cMbgxCJrTYUqgcmiC1berh5DFrtY1KeU4PXZ6NZxgenniF1mXCRk", "qUbxboqjBRp96j3La8D1RYkyqx5uQbJPoW", "dcb58d4670a6922abc89d5fc1aea38316ee7e373", 2000000000, callData, 2500000, 40)
 	if err != nil {
 		fmt.Println("Err coming from CreateContractTx")
 		fmt.Println(err)
@@ -42,7 +46,21 @@ func TestCreateContractTx(t *testing.T) {
 	fmt.Println("raw signed transaction is: ", rawTx)
 }
 
-func TestABIUnmarshal(t *testing.T) {
+func TestABI(t *testing.T) {
+	const definition = `[{"inputs":[],"name":"get","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"x","type":"uint256"}],"name":"set","outputs":[],"stateMutability":"nonpayable","type":"function"}]`
+
+	abi, err := abi.JSON(strings.NewReader(definition))
+	if err != nil {
+		panic(err)
+	}
+	out, err := abi.Pack("set", big.NewInt(5))
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("ByteCode: ", hex.EncodeToString(out))
+}
+
+func TestContractData(t *testing.T) {
 	//Reading the ABI
 	var abiJson = `[{"inputs":[],"name":"get","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"x","type":"uint256"}],"name":"set","outputs":[],"stateMutability":"nonpayable","type":"function"}]`
 	parsedABI, err := abi.JSON(strings.NewReader(abiJson))

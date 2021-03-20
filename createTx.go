@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v3"
@@ -58,6 +59,34 @@ func init() {
 	//TestnetParams
 	qtumTestNetParams.PubKeyHashAddrID = 120
 	qtumTestNetParams.ScriptHashAddrID = 110
+}
+
+//Create something like a map where "name"->inputs or Look at ABI gen
+func CallContractData(reader io.Reader, arguments map[string][]interface{}) ([]byte, error) {
+	parsedABI, err := abi.JSON(reader)
+	if err != nil {
+		fmt.Println("Error reading abi JSON: ")
+		return []byte{}, err
+	}
+	//Packing the ABI
+	var bytecode []byte
+	for name, inputs := range arguments {
+		var methodInputs []interface{}
+		//Loop through arguments and create the list of inputs
+		fmt.Println("Method name: ", name)
+		for _, input := range inputs {
+			methodInputs = append(methodInputs, input)
+		}
+		//Pack the inputs into the method
+		fmt.Println("Method Inputs: ", methodInputs)
+		bytecode, err = parsedABI.Pack(name, methodInputs...)
+		if err != nil {
+			fmt.Println("Could not pack input: ", err)
+			return []byte{}, err
+		}
+
+	}
+	return bytecode, nil
 }
 
 //Take in an ABI in JSON format and return a the corresponding hex_string
@@ -237,15 +266,7 @@ func Tx(privKey string, destination string, amount int64) (string, error) {
 	return finalRawTx, nil
 }
 
-//Generates a Tx with vout pubkeyscript of type "create" (not to be confused with "create_sender")
-/*
-	Add options for:
-
-	Gas      *big.Int
-	GasPrice *big.Int
-
-*/
-func CreateTx(privKey string, sender string, amount int64, data string) (string, error) {
+func CallTx(privKey string, from string, contractAddr string, amount int64, data []byte, gas int64, gasPrice int64) (string, error) {
 
 	redeemTx := wire.NewMsgTx(wire.TxVersion)
 
@@ -306,7 +327,7 @@ func CreateTx(privKey string, sender string, amount int64, data string) (string,
 
 	}
 
-	var change int64 = amountIn - amount - 110000000
+	var change int64 = amountIn - amount - gas*gasPrice
 
 	//Get address
 	addrPubKey, err := qtumsuite.NewAddressPubKey(wif.SerializePubKey(), &chaincfg.TestNet3Params)
@@ -319,13 +340,13 @@ func CreateTx(privKey string, sender string, amount int64, data string) (string,
 
 	changeTxOut := wire.NewTxOut(change, changeScript)
 
-	senderAddr, err := qtumsuite.DecodeAddress(sender, &qtumTestNetParams)
+	fromAddr, err := qtumsuite.DecodeAddress(from, &qtumTestNetParams)
 	if err != nil {
 		return "", err
 	}
 
 	//Generate PayToAddressScript
-	senderScript, err := txscript.PayToAddrScript(senderAddr)
+	senderScript, err := txscript.PayToAddrScript(fromAddr)
 	if err != nil {
 		return "", err
 	}
@@ -333,7 +354,7 @@ func CreateTx(privKey string, sender string, amount int64, data string) (string,
 	senderTxOut := wire.NewTxOut(amount, senderScript)
 	redeemTx.AddTxOut(senderTxOut)
 
-	contractScript, err := ContractScript(redeemTx, wif, data, 0xc1) //0xc1 -> OP_CREATE
+	contractScript, err := ContractScript(redeemTx, wif, data, contractAddr)
 	if err != nil {
 		fmt.Println("Something went wrong with the contract script: ", err)
 		return "", err
@@ -357,20 +378,21 @@ func CreateTx(privKey string, sender string, amount int64, data string) (string,
 //Creates pubKeyScript of to create or call a contract with data depending on the byte used for opcode
 // a 0xc2 byte (OP_CALL) will call a contract with the data, while a 0xc1 byte (OP_CREATE) will create
 // a contract with the data
-func ContractScript(redeemTx *wire.MsgTx, wif *qtumsuite.WIF, data string, opcode byte) ([]byte, error) {
+func ContractScript(redeemTx *wire.MsgTx, wif *qtumsuite.WIF, data []byte, contractAddr string) ([]byte, error) {
 
 	//Build scriptPubKey
 	scriptBuilder := txscript.NewScriptBuilder()
 	scriptBuilder.AddData([]byte{4})  //EVM Version
 	scriptBuilder.AddInt64(2500000)   //gas limit
 	scriptBuilder.AddData([]byte{40}) //Gas price
-	hexData, err := hex.DecodeString(data)
+	scriptBuilder.AddData(data)       //contract data
+	hexContractAddr, err := hex.DecodeString(contractAddr)
 	if err != nil {
 		fmt.Println("odd length coming from data")
 		return []byte{0}, err
 	}
-	scriptBuilder.AddData(hexData) //contract data
-	scriptBuilder.AddOp(opcode)    // Add OP_CODE byte
+	scriptBuilder.AddData(hexContractAddr) //contract address
+	scriptBuilder.AddOp(0xc2)              // Add OP_CODE byte
 
 	createScript, err := scriptBuilder.Script()
 	if err != nil {
