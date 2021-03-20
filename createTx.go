@@ -53,12 +53,17 @@ type ListUnspentResponse []struct {
 }
 
 var qtumTestNetParams = chaincfg.MainNetParams
+var (
+	OP_CREATE = byte(0xc1)
+	OP_CALL   = byte(0xc2)
+)
 
 func init() {
 
 	//TestnetParams
 	qtumTestNetParams.PubKeyHashAddrID = 120
 	qtumTestNetParams.ScriptHashAddrID = 110
+
 }
 
 //Create something like a map where "name"->inputs or Look at ABI gen
@@ -371,7 +376,7 @@ func ContractScript(redeemTx *wire.MsgTx, wif *qtumsuite.WIF, data []byte, contr
 	scriptBuilder.AddInt64(2500000)   //gas limit
 	scriptBuilder.AddData([]byte{40}) //Gas price
 	scriptBuilder.AddData(data)       //contract data
-	if opcode == 0xc2 {
+	if opcode == OP_CALL {
 		hexContractAddr, err := hex.DecodeString(contractAddr)
 		if err != nil {
 			fmt.Println("odd length coming from data")
