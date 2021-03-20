@@ -251,7 +251,7 @@ func P2khTx(privKey string, destination string, amount int64) (string, error) {
 	return finalRawTx, nil
 }
 
-func CallTx(privKey string, from string, contractAddr string, amount int64, data []byte, gas int64, gasPrice int64) (string, error) {
+func ContractTx(privKey string, from string, contractAddr string, amount int64, data []byte, gas int64, gasPrice int64, opcode byte) (string, error) {
 
 	redeemTx := wire.NewMsgTx(wire.TxVersion)
 
@@ -339,7 +339,7 @@ func CallTx(privKey string, from string, contractAddr string, amount int64, data
 	senderTxOut := wire.NewTxOut(amount, senderScript)
 	redeemTx.AddTxOut(senderTxOut)
 
-	contractScript, err := ContractScript(redeemTx, wif, data, contractAddr)
+	contractScript, err := ContractScript(redeemTx, wif, data, contractAddr, opcode)
 	if err != nil {
 		fmt.Println("Something went wrong with the contract script: ", err)
 		return "", err
@@ -363,7 +363,7 @@ func CallTx(privKey string, from string, contractAddr string, amount int64, data
 //Creates pubKeyScript of to create or call a contract with data depending on the byte used for opcode
 // a 0xc2 byte (OP_CALL) will call a contract with the data, while a 0xc1 byte (OP_CREATE) will create
 // a contract with the data
-func ContractScript(redeemTx *wire.MsgTx, wif *qtumsuite.WIF, data []byte, contractAddr string) ([]byte, error) {
+func ContractScript(redeemTx *wire.MsgTx, wif *qtumsuite.WIF, data []byte, contractAddr string, opcode byte) ([]byte, error) {
 
 	//Build scriptPubKey
 	scriptBuilder := txscript.NewScriptBuilder()
@@ -377,7 +377,7 @@ func ContractScript(redeemTx *wire.MsgTx, wif *qtumsuite.WIF, data []byte, contr
 		return []byte{0}, err
 	}
 	scriptBuilder.AddData(hexContractAddr) //contract address
-	scriptBuilder.AddOp(0xc2)              // Add OP_CODE byte
+	scriptBuilder.AddOp(opcode)            // Add OP_CODE byte (0xc2 -> OP_CALL, 0xc1 -> OP_CREATE)
 
 	createScript, err := scriptBuilder.Script()
 	if err != nil {

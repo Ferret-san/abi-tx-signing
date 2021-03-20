@@ -37,7 +37,7 @@ func TestCallContractTx(t *testing.T) {
 		"get": {},
 	}
 	callData, err := CallContractData(strings.NewReader(abiJson), arguments)
-	rawTx, err := CallTx("cMbgxCJrTYUqgcmiC1berh5DFrtY1KeU4PXZ6NZxgenniF1mXCRk", "qUbxboqjBRp96j3La8D1RYkyqx5uQbJPoW", "dcb58d4670a6922abc89d5fc1aea38316ee7e373", 2000000000, callData, 2500000, 40)
+	rawTx, err := ContractTx("cMbgxCJrTYUqgcmiC1berh5DFrtY1KeU4PXZ6NZxgenniF1mXCRk", "qUbxboqjBRp96j3La8D1RYkyqx5uQbJPoW", "dcb58d4670a6922abc89d5fc1aea38316ee7e373", 2000000000, callData, 2500000, 40, 0xc2)
 	if err != nil {
 		fmt.Println("Err coming from CreateContractTx")
 		fmt.Println(err)
