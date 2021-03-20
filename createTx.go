@@ -371,13 +371,16 @@ func ContractScript(redeemTx *wire.MsgTx, wif *qtumsuite.WIF, data []byte, contr
 	scriptBuilder.AddInt64(2500000)   //gas limit
 	scriptBuilder.AddData([]byte{40}) //Gas price
 	scriptBuilder.AddData(data)       //contract data
-	hexContractAddr, err := hex.DecodeString(contractAddr)
-	if err != nil {
-		fmt.Println("odd length coming from data")
-		return []byte{0}, err
+	if opcode == 0xc2 {
+		hexContractAddr, err := hex.DecodeString(contractAddr)
+		if err != nil {
+			fmt.Println("odd length coming from data")
+			return []byte{0}, err
+		}
+		scriptBuilder.AddData(hexContractAddr)
 	}
-	scriptBuilder.AddData(hexContractAddr) //contract address
-	scriptBuilder.AddOp(opcode)            // Add OP_CODE byte (0xc2 -> OP_CALL, 0xc1 -> OP_CREATE)
+	//contract address
+	scriptBuilder.AddOp(opcode) // Add OP_CODE byte (0xc2 -> OP_CALL, 0xc1 -> OP_CREATE)
 
 	createScript, err := scriptBuilder.Script()
 	if err != nil {
